@@ -49,7 +49,8 @@ if 'gs' not in st.session_state:
         'tur': 1, 'nakit': 5000, 'borc': 2000, 'itibar': 100, 'hisse': 50.0,
         'bitti': False, 'aktif_olay': None, 'son_haber': "Piyasalar yeni CEO'nun hamlelerini bekliyor...",
         'log': [], 'hist_nakit': [5000], 'hist_hisse': [50.0],
-        'rozetler': [], 'cfo_mesaj': "", 'skor_gonderildi': False, 'en_dusuk_nakit': 5000
+        'rozetler': [], 'cfo_mesaj': "", 'skor_gonderildi': False, 'en_dusuk_nakit': 5000,
+        'animasyon_oynadi': False # YENİ: Animasyon Kontrolü
     }
     st.session_state.kullanilan_indisler = []
 
@@ -88,7 +89,7 @@ st.markdown(f"""
 ticker_html = f"""<div class="ticker-wrap"><div class="ticker"><div class="ticker__item">📰 FLAŞ HABER: {st.session_state.gs['son_haber']}</div><div class="ticker__item">📊 BİST 100 Durumu: Hisse {st.session_state.gs['hisse']} ₺ seviyesinde.</div></div></div>"""
 st.markdown(ticker_html, unsafe_allow_html=True)
 
-# --- 15 TAM SENARYO HAVUZU (Çökme hatasını önler) ---
+# --- 15 TAM SENARYO HAVUZU ---
 def get_olaylar():
     return [
         {"baş": "📉 BIST 100 Sürü Psikolojisi!", "det": "Piyasada panik satışı başladı. CSAD analizleri sürü psikolojisini gösteriyor.", "sec": [("Hisse Geri Al (-1500₺)", -1500, 0, 10, 15), ("Sessiz Kal", 0, 0, -20, -15)]},
@@ -133,7 +134,7 @@ if st.session_state.gs['nakit'] < -3000 or st.session_state.gs['itibar'] <= 0 or
     st.session_state.gs['bitti'] = True
 
 # --- ARAYÜZ ---
-st.markdown("<h2 style='text-align: center; color: #38BDF8;'>💼 EXECUTIVE COMMAND CENTER V2.1</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center; color: #38BDF8;'>💼 EXECUTIVE COMMAND CENTER V2.2</h2>", unsafe_allow_html=True)
 t_komuta, t_analiz, t_liderlik, t_rozetler, t_arsiv = st.tabs(["🚀 Komuta", "📊 Analiz", "🏆 Liderlik", "📇 Rozet Galerisi", "📜 Şirket Arşivi"])
 
 with t_komuta:
@@ -145,22 +146,28 @@ with t_komuta:
         c3.metric("İtibar", st.session_state.gs['itibar'])
         c4.metric("Hisse (₺)", st.session_state.gs['hisse'])
     
-    # AI CFO GERİ DÖNDÜ!
     with col_met_2:
         btn_text = "🤖 CFO'ya Danış" if AI_HAZIR else "🤖 CFO (Bağlantı Yok)"
         if st.button(btn_text, disabled=not AI_HAZIR, use_container_width=True):
             with st.spinner("CFO analiz yapıyor..."):
                 olay = st.session_state.gs['aktif_olay']
                 if olay:
-                    prompt = f"Sen acımasız ve zeki bir Wall Street CFO'susun. Kasada {st.session_state.gs['nakit']} TL, Borç {st.session_state.gs['borc']} TL, İtibar {st.session_state.gs['itibar']}. Kriz: '{olay['baş']} - {olay['det']}'. Seçenekler: 1) {olay['sec'][0][0]} 2) {olay['sec'][1][0]}. CEO'ya agresif ve 3 cümlelik kısa bir tavsiye ver."
-                    try:
-                        st.session_state.gs['cfo_mesaj'] = model.generate_content(prompt).text
-                    except Exception as e:
-                        st.session_state.gs['cfo_mesaj'] = "Hata: CFO'ya ulaşılamıyor."
+                    prompt = f"Sen acımasız ve zeki Wall Street CFO'susun. Kasada {st.session_state.gs['nakit']} TL. Kriz: '{olay['baş']} - {olay['det']}'. Seçenekler: 1) {olay['sec'][0][0]} 2) {olay['sec'][1][0]}. CEO'ya agresif ve 3 cümlelik tavsiye ver."
+                    try: st.session_state.gs['cfo_mesaj'] = model.generate_content(prompt).text
+                    except: st.session_state.gs['cfo_mesaj'] = "Hata: CFO'ya ulaşılamıyor."
     
     st.divider()
 
     if st.session_state.gs['bitti']:
+        # --- YENİ: BİTİŞ ANİMASYONLARI ---
+        if not st.session_state.gs['animasyon_oynadi']:
+            rozet_str = " ".join([r[0] for r in st.session_state.gs['rozetler']])
+            if "PLATIN" in rozet_str or "ALTIN" in rozet_str:
+                st.balloons()
+            elif "ANKA" in rozet_str or "MILIMETRIK" in rozet_str:
+                st.snow()
+            st.session_state.gs['animasyon_oynadi'] = True
+
         st.error("🏁 Simülasyon Sona Erdi!")
         st.write("### 🏆 Kazanılan Başarılar")
         st.markdown('<div class="badge-container">', unsafe_allow_html=True)
@@ -168,10 +175,8 @@ with t_komuta:
             st.markdown(f'<div class="badge-card-premium {tier}"><span class="badge-icon-lg">{icon}</span><div class="badge-name">{isim}</div><div class="badge-desc">{desc}</div></div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # SKOR GÖNDERME EKRANI GERİ DÖNDÜ!
         st.write("---")
         if not st.session_state.gs['skor_gonderildi']:
-            st.write("### 🌍 Adını Tarihe Yazdır!")
             col_isim, col_btn_gonder = st.columns([3, 1])
             with col_isim: oyuncu_adi = st.text_input("Şirketinin Adı (Maks 15 Karakter):", max_chars=15)
             with col_btn_gonder:
@@ -191,9 +196,13 @@ with t_komuta:
             del st.session_state.gs
             st.rerun()
     else:
+        # --- YENİ: OYUN İÇİ UYARI ANİMASYONU ---
+        if st.session_state.gs['nakit'] < 0:
+            st.toast("🚨 DİKKAT: Kasa ekside! İflas riski!", icon="📉")
+
         if st.session_state.gs['aktif_olay'] is None:
             havuz = get_olaylar()
-            if len(st.session_state.kullanilan_indisler) >= len(havuz): st.session_state.kullanilan_indisler = [] # Hata Koruması
+            if len(st.session_state.kullanilan_indisler) >= len(havuz): st.session_state.kullanilan_indisler = [] 
             idx = random.choice([i for i in range(len(havuz)) if i not in st.session_state.kullanilan_indisler])
             st.session_state.kullanilan_indisler.append(idx)
             st.session_state.gs['aktif_olay'] = havuz[idx]
