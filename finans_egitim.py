@@ -124,7 +124,7 @@ with tab_komuta:
                         cevap = model.generate_content(prompt)
                         st.session_state.gs['cfo_mesaj'] = cevap.text
                     except Exception as e:
-                        st.session_state.gs['cfo_mesaj'] = "Hata: CFO'ya ulaşılamıyor. Kararı sen vermelisin."
+                        st.session_state.gs['cfo_mesaj'] = f"Google Sunucu Hatası: {e}"
     st.divider()
 
     if st.session_state.gs['bitti']:
