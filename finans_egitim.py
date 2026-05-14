@@ -12,11 +12,23 @@ import google.generativeai as genai
 st.set_page_config(page_title="CEO Command Center", layout="wide", initial_sidebar_state="collapsed")
 
 # --- YAPAY ZEKA BAĞLANTISI (SECRETS KONTROLÜ) ---
+# --- YAPAY ZEKA BAĞLANTISI (SECRETS KONTROLÜ) ---
 AI_HAZIR = False
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemini-pro')
-    AI_HAZIR = True
+    try:
+        # Hesabına tanımlı ve çalışmaya hazır İLK modeli otomatik bul!
+        kullanilabilir_model = None
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                kullanilabilir_model = m.name
+                break
+        
+        if kullanilabilir_model:
+            model = genai.GenerativeModel(kullanilabilir_model)
+            AI_HAZIR = True
+    except:
+        pass
 
 # --- HAFIZA BAŞLATMA ---
 if 'gs' not in st.session_state:
