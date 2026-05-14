@@ -15,7 +15,7 @@ st.set_page_config(page_title="CEO Command Center", layout="wide", initial_sideb
 AI_HAZIR = False
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemini-1.5-flash')
+   model = genai.GenerativeModel('gemini-pro')
     AI_HAZIR = True
 
 # --- HAFIZA BAŞLATMA ---
