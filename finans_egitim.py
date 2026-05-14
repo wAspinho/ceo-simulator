@@ -50,13 +50,13 @@ if 'gs' not in st.session_state:
         'bitti': False, 'aktif_olay': None, 'son_haber': "Piyasalar yeni CEO'nun hamlelerini bekliyor...",
         'log': [], 'hist_nakit': [5000], 'hist_hisse': [50.0],
         'rozetler': [], 'cfo_mesaj': "", 'skor_gonderildi': False, 'en_dusuk_nakit': 5000,
-        'animasyon_oynadi': False # YENİ: Animasyon Kontrolü
+        'animasyon_oynadi': False
     }
     st.session_state.kullanilan_indisler = []
 
 MAX_TUR = 10
 
-# --- CSS (ROZET VE KART TASARIMLARI) ---
+# --- CSS (YENİ CEZA TASARIMLARI EKLENDİ) ---
 bg_color = "#3A0E0E" if st.session_state.gs['nakit'] < 0 else "#0B0E14"
 st.markdown(f"""
     <style>
@@ -70,11 +70,18 @@ st.markdown(f"""
     .badge-container {{ display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; padding: 20px; }}
     .badge-card-premium {{ width: 200px; padding: 20px; border-radius: 15px; text-align: center; transition: transform 0.3s ease; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }}
     .badge-card-premium:hover {{ transform: translateY(-10px); }}
+    
+    /* YENİ: KÖTÜ PERFORMANS SEVİYELERİ */
+    .tier-danger {{ background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%); box-shadow: 0 5px 15px rgba(220, 38, 38, 0.4); border: 1px solid #ef4444; color: white; }}
+    .tier-average {{ background: linear-gradient(135deg, #4b5563 0%, #374151 100%); box-shadow: 0 5px 15px rgba(107, 114, 128, 0.3); border: 1px solid #9ca3af; }}
+    
+    /* İYİ PERFORMANS SEVİYELERİ */
     .tier-bronze {{ background: linear-gradient(135deg, #3d2b1f 0%, #8c593b 100%); box-shadow: 0 5px 15px rgba(140, 89, 59, 0.3); border: 1px solid #cd7f32; }}
     .tier-silver {{ background: linear-gradient(135deg, #2c3e50 0%, #bdc3c7 100%); box-shadow: 0 5px 15px rgba(189, 195, 199, 0.3); border: 1px solid silver; }}
     .tier-gold {{ background: linear-gradient(135deg, #b8860b 0%, #ffd700 100%); box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3); border: 1px solid #ffd700; color: #000; }}
     .tier-platinum {{ background: linear-gradient(135deg, #1e3a8a 0%, #38bdf8 100%); box-shadow: 0 5px 20px rgba(56, 189, 248, 0.4); border: 1px solid #e2e8f0; }}
     .tier-secret {{ background: linear-gradient(135deg, #4c1d95 0%, #c026d3 100%); box-shadow: 0 5px 15px rgba(192, 38, 211, 0.5); border: 1px solid #f472b6; animation: pulse 2s infinite; }}
+    
     @keyframes pulse {{ 0% {{ opacity: 1; }} 50% {{ opacity: 0.7; }} 100% {{ opacity: 1; }} }}
     .badge-icon-lg {{ font-size: 50px; margin-bottom: 10px; display: block; }}
     .badge-name {{ font-weight: 900; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; }}
@@ -109,23 +116,43 @@ def get_olaylar():
         {"baş": "🚢 Lojistik Tıkanıklığı", "det": "Küresel kriz nedeniyle tedarik zinciri koptu.", "sec": [("Uçak Kargo (-2000₺)", -2000, 0, 10, -5), ("Müşteri Beklesin (0₺)", 0, 0, -40, -15)]}
     ]
 
-# --- ROZET MANTIĞI ---
+# --- DAHA GERÇEKÇİ VE ACIMASIZ ROZET MANTIĞI ---
 def rozet_hesapla():
     rozetler = []
     gs = st.session_state.gs
-    if gs['hisse'] >= 150: rozetler.append(("PLATIN BORSA KURDU", "📈", "Hisse fiyatında piyasayı domine ettin!", "tier-platinum"))
-    elif gs['hisse'] >= 100: rozetler.append(("ALTIN BORSA KURDU", "📉", "Yatırımcıların yeni favorisi sensin.", "tier-gold"))
-    elif gs['hisse'] >= 75: rozetler.append(("GÜMÜŞ BORSA KURDU", "📊", "Ortalamanın üzerinde bir büyüme.", "tier-silver"))
+    
+    # 1. KÖTÜ SONLAR VE CEZALAR (DANGER TIER)
+    if gs['nakit'] < 0:
+        rozetler.append(("KAPIDA KALDIN", "🚪", "Şirket iflas etti. Yönetim kurulu odanı boşalttırdı!", "tier-danger"))
+    if gs['hisse'] <= 25:
+        rozetler.append(("TAHTA KAPANDI", "📉", "Yatırımcıların tüm parasını buharlaştırdın. Tarihi çöküş.", "tier-danger"))
+    if gs['itibar'] <= 30:
+        rozetler.append(("SEVİLMEYEN PATRON", "🍅", "Halkla ilişkiler felaketi. Herkes şirketten nefret ediyor.", "tier-danger"))
 
-    if gs['itibar'] >= 180: rozetler.append(("PLATIN VİZYONER", "🕊️", "Dünya çapında etik bir liderlik sergiledin.", "tier-platinum"))
-    elif gs['itibar'] >= 140: rozetler.append(("ALTIN LİDER", "🌟", "Kurumsal imajın zirvelerde.", "tier-gold"))
+    # 2. İYİ SONLAR (Eğer yukarıdaki utanç verici hatalar yapılmadıysa)
+    if not any(r[3] == "tier-danger" for r in rozetler):
+        if gs['hisse'] >= 150: rozetler.append(("PLATIN BORSA KURDU", "📈", "Piyasayı domine ettin!", "tier-platinum"))
+        elif gs['hisse'] >= 100: rozetler.append(("ALTIN BORSA KURDU", "🐂", "Boğa piyasasının yıldızı sensin.", "tier-gold"))
+        elif gs['hisse'] >= 75: rozetler.append(("GÜMÜŞ BORSA KURDU", "📊", "Ortalamanın üzerinde stabil bir büyüme.", "tier-silver"))
 
-    if gs['nakit'] >= 15000: rozetler.append(("ALTIN HAZİNEDAR", "💰", "Şirketin nakit akışı durdurulamaz.", "tier-gold"))
+        if gs['itibar'] >= 180: rozetler.append(("PLATIN VİZYONER", "🕊️", "Dünya çapında etik bir liderlik sergiledin.", "tier-platinum"))
+        elif gs['itibar'] >= 140: rozetler.append(("ALTIN LİDER", "🌟", "Kurumsal imajın zirvelerde.", "tier-gold"))
 
-    if gs['en_dusuk_nakit'] < -1000 and gs['nakit'] > 5000: rozetler.append(("ANKA KUŞU", "🔥", "İflasın eşiğinden muazzam bir dönüş yaptın!", "tier-secret"))
-    if gs['nakit'] == 0: rozetler.append(("MILIMETRIK HESAP", "🎯", "Kasada tam 0 TL bırakarak bitirdin!", "tier-secret"))
+        if gs['nakit'] >= 15000: rozetler.append(("ALTIN HAZİNEDAR", "💰", "Şirketin nakit akışı durdurulamaz.", "tier-gold"))
 
-    if not rozetler: rozetler.append(("BRONZ CEO", "💼", "Standart bir yönetim dönemi.", "tier-bronze"))
+        # GİZLİ VE ÖZEL ROZETLER
+        if gs['nakit'] >= 10000 and gs['itibar'] >= 100:
+            rozetler.append(("EKONOMETRİK DEHA", "🧮", "Matematiksel modellerdeki (özellikle lineer piyasa modelindeki) işaret hatalarını bile öngörüp düzelterek kusursuz bir strateji kurdun.", "tier-secret"))
+
+        if gs['en_dusuk_nakit'] < -1000 and gs['nakit'] > 5000: 
+            rozetler.append(("ANKA KUŞU", "🔥", "İflasın eşiğinden muazzam bir dönüş yaptın!", "tier-secret"))
+        if gs['nakit'] == 0: 
+            rozetler.append(("MİLİMETRİK HESAP", "🎯", "Kasada tam 0 TL bırakarak oyunu bitirdin!", "tier-secret"))
+
+    # 3. HİÇBİR ŞEY OLAMAYANLAR (Sıkıcı Yöneticiler)
+    if len(rozetler) == 0: 
+        rozetler.append(("SIRADAN CEO", "👔", "Ne uzadın ne kısaldın. Kimsenin hatırlamayacağı, sıkıcı bir 10 çeyrek.", "tier-average"))
+        
     return rozetler
 
 if st.session_state.gs['nakit'] < -3000 or st.session_state.gs['itibar'] <= 0 or st.session_state.gs['tur'] > MAX_TUR:
@@ -134,7 +161,7 @@ if st.session_state.gs['nakit'] < -3000 or st.session_state.gs['itibar'] <= 0 or
     st.session_state.gs['bitti'] = True
 
 # --- ARAYÜZ ---
-st.markdown("<h2 style='text-align: center; color: #38BDF8;'>💼 EXECUTIVE COMMAND CENTER V2.2</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center; color: #38BDF8;'>💼 EXECUTIVE COMMAND CENTER V2.3</h2>", unsafe_allow_html=True)
 t_komuta, t_analiz, t_liderlik, t_rozetler, t_arsiv = st.tabs(["🚀 Komuta", "📊 Analiz", "🏆 Liderlik", "📇 Rozet Galerisi", "📜 Şirket Arşivi"])
 
 with t_komuta:
@@ -159,17 +186,16 @@ with t_komuta:
     st.divider()
 
     if st.session_state.gs['bitti']:
-        # --- YENİ: BİTİŞ ANİMASYONLARI ---
         if not st.session_state.gs['animasyon_oynadi']:
             rozet_str = " ".join([r[0] for r in st.session_state.gs['rozetler']])
-            if "PLATIN" in rozet_str or "ALTIN" in rozet_str:
+            if "PLATIN" in rozet_str or "ALTIN" in rozet_str or "DEHA" in rozet_str:
                 st.balloons()
-            elif "ANKA" in rozet_str or "MILIMETRIK" in rozet_str:
+            elif "ANKA" in rozet_str or "MİLİMETRİK" in rozet_str:
                 st.snow()
             st.session_state.gs['animasyon_oynadi'] = True
 
         st.error("🏁 Simülasyon Sona Erdi!")
-        st.write("### 🏆 Kazanılan Başarılar")
+        st.write("### 🏆 Kazanılan / Kaybedilen Başarılar")
         st.markdown('<div class="badge-container">', unsafe_allow_html=True)
         for isim, icon, desc, tier in st.session_state.gs['rozetler']:
             st.markdown(f'<div class="badge-card-premium {tier}"><span class="badge-icon-lg">{icon}</span><div class="badge-name">{isim}</div><div class="badge-desc">{desc}</div></div>', unsafe_allow_html=True)
@@ -184,7 +210,7 @@ with t_komuta:
                 if st.button("Skorumu Gönder", use_container_width=True, type="primary"):
                     if oyuncu_adi:
                         with st.spinner("Skor yükleniyor..."):
-                            rozet_isim = st.session_state.gs['rozetler'][0][0] if st.session_state.gs['rozetler'] else "Yönetici"
+                            rozet_isim = st.session_state.gs['rozetler'][0][0] if st.session_state.gs['rozetler'] else "Sıradan CEO"
                             update_leaderboard({"isim": oyuncu_adi, "hisse": st.session_state.gs['hisse'], "itibar": st.session_state.gs['itibar'], "rozet": rozet_isim})
                             st.session_state.gs['skor_gonderildi'] = True
                             st.rerun()
@@ -196,7 +222,6 @@ with t_komuta:
             del st.session_state.gs
             st.rerun()
     else:
-        # --- YENİ: OYUN İÇİ UYARI ANİMASYONU ---
         if st.session_state.gs['nakit'] < 0:
             st.toast("🚨 DİKKAT: Kasa ekside! İflas riski!", icon="📉")
 
@@ -251,10 +276,12 @@ with t_liderlik:
 with t_rozetler:
     st.write("### 📜 Tüm Rozetler ve Gereksinimler")
     st.markdown("""
+    - **🚨 UTANÇ ROZETLERİ:** Kasa eksiye düşerse, itibar 30'un altına inerse veya hisse dibi görürse alırsın. (Diğer tüm iyi rozetleri iptal eder!)
     - **Platin Seviye:** Hisse > 150₺ veya İtibar > 180. (Zirve CEO)
     - **Altın Seviye:** Hisse > 100₺ veya Nakit > 15.000₺. (Usta Yönetici)
     - **Gümüş Seviye:** Hisse > 75₺. (Başarılı Yönetici)
-    - **Gizli Rozetler:** Krizden muazzam bir dönüş yapmak veya kasayı kuruşu kuruşuna boşaltmak.
+    - **Gizli Rozetler:** Krizden muazzam bir dönüş yapmak, kasayı tam 0'da bırakmak veya finansal modelleri kusursuz hesaplamak.
+    - **Sıradan CEO:** Çok büyük hatalar yapmayan ama çok da parlamayan sıkıcı yöneticilerin aldığı gri rozet.
     """)
 
 with t_arsiv:
