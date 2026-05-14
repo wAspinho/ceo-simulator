@@ -30,7 +30,7 @@ if 'gs' not in st.session_state:
 
 MAX_TUR = 10
 
-# --- CSS (Öncekiyle Aynı) ---
+# --- CSS TASARIMI ---
 bg_color = "#3A0E0E" if st.session_state.gs['nakit'] < 0 else "#0B0E14"
 st.markdown(f"""
     <style>
@@ -113,7 +113,7 @@ with tab_komuta:
         c4.metric("Hisse (₺)", st.session_state.gs['hisse'])
     
     with col_met_2:
-        # AI CFO BUTONU BURADA ÇALIŞIYOR
+        # AI CFO BUTONU
         btn_text = "🤖 CFO'ya Danış" if AI_HAZIR else "🤖 CFO (Bağlantı Yok)"
         if st.button(btn_text, disabled=not AI_HAZIR, use_container_width=True):
             with st.spinner("CFO analiz yapıyor..."):
@@ -148,13 +148,12 @@ with tab_komuta:
             idx = random.choice(musait)
             st.session_state.kullanilan_indisler.append(idx)
             st.session_state.gs['aktif_olay'] = havuz[idx]
-            st.session_state.gs['cfo_mesaj'] = "" # Yeni olayda eski mesajı sil
+            st.session_state.gs['cfo_mesaj'] = ""
 
         aktif = st.session_state.gs['aktif_olay']
         
         st.markdown(f"<div class='game-card'><div class='card-title'>{aktif['baş']}</div><div class='card-text'>{aktif['det']}</div></div>", unsafe_allow_html=True)
 
-        # CFO MESAJINI EKRANDA GÖSTER
         if st.session_state.gs['cfo_mesaj']:
             st.info(f"👔 **Yapay Zeka CFO Diyor ki:** {st.session_state.gs['cfo_mesaj']}")
 
@@ -190,4 +189,20 @@ with tab_flashcard:
     cols = st.columns(3) 
     for i, olay in enumerate(get_olaylar()):
         s_html = "".join([f"<li><b>{s[0]}</b> <br><small>Nakit: {s[1]} | İtibar: {s[3]}</small></li>" for s in olay['sec']])
-        cols[i%3].markdown(f"<div class='flip-card'><div class='flip-card-inner'><div class="flip-card-front"><h4 style='color:#38BDF8'>{olay['baş']}</h4><p>{olay['det']}</p></div><div class='flip-card-back'><h5>Etkiler:</h5><ul>{s_html}</ul></div></div></div>", unsafe_allow_html=True)
+        
+        # HATA DÜZELTİLDİ: Üçlü tırnak kullanarak HTML string sorunu çözüldü
+        card_html = f"""
+        <div class="flip-card">
+            <div class="flip-card-inner">
+                <div class="flip-card-front">
+                    <h4 style="color:#38BDF8">{olay['baş']}</h4>
+                    <p>{olay['det']}</p>
+                </div>
+                <div class="flip-card-back">
+                    <h5>Etkiler:</h5>
+                    <ul>{s_html}</ul>
+                </div>
+            </div>
+        </div>
+        """
+        cols[i%3].markdown(card_html, unsafe_allow_html=True)
