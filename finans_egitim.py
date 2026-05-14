@@ -2,33 +2,49 @@ import streamlit as st
 import pandas as pd
 import random
 import plotly.graph_objects as go
-import numpy_financial as npf
 import io
 import requests
-from streamlit_lottie import st_lottie
 import google.generativeai as genai
 
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="CEO Command Center", layout="wide", initial_sidebar_state="collapsed")
 
-# --- YAPAY ZEKA BAĞLANTISI (SECRETS KONTROLÜ) ---
-# --- YAPAY ZEKA BAĞLANTISI (SECRETS KONTROLÜ) ---
+# --- YAPAY ZEKA BAĞLANTISI ---
 AI_HAZIR = False
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     try:
-        # Hesabına tanımlı ve çalışmaya hazır İLK modeli otomatik bul!
         kullanilabilir_model = None
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
                 kullanilabilir_model = m.name
                 break
-        
         if kullanilabilir_model:
             model = genai.GenerativeModel(kullanilabilir_model)
             AI_HAZIR = True
     except:
         pass
+
+# --- BULUT VERİTABANI BAĞLANTISI (LİDERLİK TABLOSU) ---
+def get_leaderboard():
+    if "BIN_ID" not in st.secrets or "JSONBIN_KEY" not in st.secrets: return []
+    url = f"https://api.jsonbin.io/v3/b/{st.secrets['BIN_ID']}"
+    headers = {"X-Master-Key": st.secrets['JSONBIN_KEY']}
+    try:
+        req = requests.get(url, headers=headers)
+        return req.json().get('record', [])
+    except:
+        return []
+
+def update_leaderboard(yeni_skor):
+    if "BIN_ID" not in st.secrets or "JSONBIN_KEY" not in st.secrets: return
+    mevcut = get_leaderboard()
+    mevcut.append(yeni_skor)
+    # Hisse fiyatına göre büyükten küçüğe sırala ve en iyi 10'u tut
+    mevcut = sorted(mevcut, key=lambda x: x['hisse'], reverse=True)[:10]
+    url = f"https://api.jsonbin.io/v3/b/{st.secrets['BIN_ID']}"
+    headers = {"X-Master-Key": st.secrets['JSONBIN_KEY'], "Content-Type": "application/json"}
+    requests.put(url, json=mevcut, headers=headers)
 
 # --- HAFIZA BAŞLATMA ---
 if 'gs' not in st.session_state:
@@ -36,7 +52,7 @@ if 'gs' not in st.session_state:
         'tur': 1, 'nakit': 5000, 'borc': 2000, 'itibar': 100, 'hisse': 50.0,
         'bitti': False, 'aktif_olay': None, 'son_haber': "Piyasalar yeni CEO'nun hamlelerini bekliyor...",
         'log': [], 'hist_nakit': [5000], 'hist_hisse': [50.0],
-        'rozetler': [], 'cfo_mesaj': ""
+        'rozetler': [], 'cfo_mesaj': "", 'skor_gonderildi': False
     }
     st.session_state.kullanilan_indisler = []
 
@@ -113,7 +129,8 @@ if st.session_state.gs['nakit'] < -3000 or st.session_state.gs['itibar'] <= 0 or
 
 st.markdown("<h2 style='text-align: center; color: #38BDF8;'>💼 EXECUTIVE COMMAND CENTER</h2>", unsafe_allow_html=True)
 
-tab_komuta, tab_analiz, tab_tarihce, tab_flashcard = st.tabs(["🚀 Komuta Merkezi", "📊 Analiz Departmanı", "📜 Şirket Arşivi", "📇 Eğitim Kartları"])
+# YENİ SEKME EKLENDİ!
+tab_komuta, tab_analiz, tab_tarihce, tab_flashcard, tab_liderlik = st.tabs(["🚀 Komuta", "📊 Analiz", "📜 Arşiv", "📇 Kartlar", "🏆 Liderlik Tablosu"])
 
 with tab_komuta:
     col_met_1, col_met_2 = st.columns([4, 1])
@@ -125,7 +142,6 @@ with tab_komuta:
         c4.metric("Hisse (₺)", st.session_state.gs['hisse'])
     
     with col_met_2:
-        # AI CFO BUTONU
         btn_text = "🤖 CFO'ya Danış" if AI_HAZIR else "🤖 CFO (Bağlantı Yok)"
         if st.button(btn_text, disabled=not AI_HAZIR, use_container_width=True):
             with st.spinner("CFO analiz yapıyor..."):
@@ -136,7 +152,7 @@ with tab_komuta:
                         cevap = model.generate_content(prompt)
                         st.session_state.gs['cfo_mesaj'] = cevap.text
                     except Exception as e:
-                        st.session_state.gs['cfo_mesaj'] = f"Google Sunucu Hatası: {e}"
+                        st.session_state.gs['cfo_mesaj'] = "Hata: CFO'ya ulaşılamıyor. Kararı sen vermelisin."
     st.divider()
 
     if st.session_state.gs['bitti']:
@@ -146,6 +162,36 @@ with tab_komuta:
         for i, (isim, aciklama) in enumerate(st.session_state.gs['rozetler']):
             with col_badge[i]:
                 st.markdown(f"<div class='badge-card'><div class='badge-icon'>{isim.split(' ')[-1]}</div><div class='badge-title'>{' '.join(isim.split(' ')[:-1])}</div><p style='font-size:12px; color:#E2E8F0; margin-top:5px;'>{aciklama}</p></div>", unsafe_allow_html=True)
+        
+        # --- SKOR GÖNDERME EKRANI ---
+        st.write("---")
+        if not st.session_state.gs['skor_gonderildi']:
+            st.write("### 🌍 Adını Tarihe Yazdır!")
+            col_isim, col_btn_gonder = st.columns([3, 1])
+            with col_isim:
+                oyuncu_adi = st.text_input("Şirketinin veya Senin Adın (Maks 15 Karakter):", max_chars=15)
+            with col_btn_gonder:
+                st.write("") # Boşluk hizalama
+                st.write("")
+                if st.button("Skorumu Gönder", use_container_width=True, type="primary"):
+                    if oyuncu_adi:
+                        with st.spinner("Skor buluta yükleniyor..."):
+                            rozet_isim = st.session_state.gs['rozetler'][0][0] if st.session_state.gs['rozetler'] else "Yönetici"
+                            yeni_veri = {
+                                "isim": oyuncu_adi,
+                                "hisse": st.session_state.gs['hisse'],
+                                "itibar": st.session_state.gs['itibar'],
+                                "rozet": rozet_isim
+                            }
+                            update_leaderboard(yeni_veri)
+                            st.session_state.gs['skor_gonderildi'] = True
+                            st.rerun()
+                    else:
+                        st.warning("Lütfen ismini gir!")
+        else:
+            st.success("Skorun başarıyla buluta kaydedildi! 'Liderlik Tablosu' sekmesinden sıralamanı görebilirsin.")
+
+        st.write("---")
         if st.button("🔄 Yeni Simülasyon Başlat", use_container_width=True):
             del st.session_state.gs
             st.rerun()
@@ -163,13 +209,11 @@ with tab_komuta:
             st.session_state.gs['cfo_mesaj'] = ""
 
         aktif = st.session_state.gs['aktif_olay']
-        
         st.markdown(f"<div class='game-card'><div class='card-title'>{aktif['baş']}</div><div class='card-text'>{aktif['det']}</div></div>", unsafe_allow_html=True)
 
         if st.session_state.gs['cfo_mesaj']:
             st.info(f"👔 **Yapay Zeka CFO Diyor ki:** {st.session_state.gs['cfo_mesaj']}")
 
-        st.write("<h4 style='text-align:center;'>Stratejik Kararın Nedir?</h4>", unsafe_allow_html=True)
         col_btn = st.columns(len(aktif['sec']))
         for i, (isim, n, b, it, h) in enumerate(aktif['sec']):
             if col_btn[i].button(isim, use_container_width=True, key=f"btn_{st.session_state.gs['tur']}_{i}"):
@@ -188,33 +232,31 @@ with tab_analiz:
     col_g1, col_g2 = st.columns(2)
     with col_g1: st.plotly_chart(go.Figure(go.Indicator(mode="gauge+number", value=st.session_state.gs['itibar'], title={'text':"İtibar", 'font':{'color':'white'}}, gauge={'axis':{'range':[0,200]},'bar':{'color':"#38BDF8"}})).update_layout(paper_bgcolor='rgba(0,0,0,0)', font_color='white', height=300), use_container_width=True)
     with col_g2: st.plotly_chart(go.Figure(go.Indicator(mode="gauge+number+delta", value=st.session_state.gs['hisse'], delta={'reference':50.0}, title={'text':"Hisse", 'font':{'color':'white'}}, gauge={'axis':{'range':[0,150]},'bar':{'color':"#A78BFA"}})).update_layout(paper_bgcolor='rgba(0,0,0,0)', font_color='white', height=300), use_container_width=True)
-    st.line_chart(pd.DataFrame({"Nakit": st.session_state.gs['hist_nakit']}), color="#38BDF8")
 
 with tab_tarihce:
     st.write("### 📜 Geçmiş Kararlar")
     if len(st.session_state.gs['log']) > 0:
         st.dataframe(pd.DataFrame(st.session_state.gs['log']), use_container_width=True)
-        st.download_button("📥 Excel Olarak İndir", data=veri_indir_excel(pd.DataFrame(st.session_state.gs['log'])), file_name='ceo_arşivi.xlsx')
 
 with tab_flashcard:
     st.write("### 🧠 Eğitim Kartları")
     cols = st.columns(3) 
     for i, olay in enumerate(get_olaylar()):
         s_html = "".join([f"<li><b>{s[0]}</b> <br><small>Nakit: {s[1]} | İtibar: {s[3]}</small></li>" for s in olay['sec']])
-        
-        # HATA DÜZELTİLDİ: Üçlü tırnak kullanarak HTML string sorunu çözüldü
-        card_html = f"""
-        <div class="flip-card">
-            <div class="flip-card-inner">
-                <div class="flip-card-front">
-                    <h4 style="color:#38BDF8">{olay['baş']}</h4>
-                    <p>{olay['det']}</p>
-                </div>
-                <div class="flip-card-back">
-                    <h5>Etkiler:</h5>
-                    <ul>{s_html}</ul>
-                </div>
-            </div>
-        </div>
-        """
+        card_html = f"""<div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 style="color:#38BDF8">{olay['baş']}</h4><p>{olay['det']}</p></div><div class="flip-card-back"><h5>Etkiler:</h5><ul>{s_html}</ul></div></div></div>"""
         cols[i%3].markdown(card_html, unsafe_allow_html=True)
+
+# YENİ: LİDERLİK TABLOSU SEKMESİ
+with tab_liderlik:
+    st.write("### 🌍 Global Top 10 CEO (Hisse Değerine Göre)")
+    if "BIN_ID" in st.secrets:
+        tablo = get_leaderboard()
+        if tablo:
+            df_lb = pd.DataFrame(tablo)
+            df_lb.index = df_lb.index + 1
+            df_lb = df_lb.rename(columns={"isim": "CEO / Şirket", "hisse": "Hisse Değeri (₺)", "itibar": "İtibar Puanı", "rozet": "Kazanılan Unvan"})
+            st.dataframe(df_lb, use_container_width=True)
+        else:
+            st.info("Henüz kimse skor göndermedi. Piyasalar ilk efsane CEO'sunu bekliyor!")
+    else:
+        st.warning("⚠️ Liderlik tablosu veritabanına bağlanılamadı. Streamlit Secrets ayarlarını kontrol et.")
