@@ -48,9 +48,7 @@ if 'gs' not in st.session_state:
         'bitti': False, 'aktif_olay': None, 'son_haber': "Piyasalar yeni CEO'nun hamlelerini bekliyor...",
         'log': [], 'hist_nakit': [5000], 'hist_hisse': [50.0],
         'rozetler': [], 'cfo_mesaj': "", 'skor_gonderildi': False, 'en_dusuk_nakit': 5000,
-        'animasyon_oynadi': False,
-        'ik_yonetici': None, # YENİ: İşe alınan yönetici
-        'mulakat_gosterilen': None # YENİ: Hangi adayın cevabı ekranda
+        'animasyon_oynadi': False, 'ik_yonetici': None, 'mulakat_gosterilen': None
     }
     st.session_state.kullanilan_indisler = []
 
@@ -78,15 +76,9 @@ st.markdown(f"""
     .tier-platinum {{ background: linear-gradient(135deg, #1e3a8a 0%, #38bdf8 100%); border: 1px solid #e2e8f0; }}
     .tier-secret {{ background: linear-gradient(135deg, #4c1d95 0%, #c026d3 100%); border: 1px solid #f472b6; animation: pulse 2s infinite; }}
     
-    @keyframes pulse {{ 0% {{ opacity: 1; }} 50% {{ opacity: 0.7; }} 100% {{ opacity: 1; }} }}
-    .badge-icon-lg {{ font-size: 50px; margin-bottom: 10px; display: block; }}
-    .badge-name {{ font-weight: 900; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; }}
-    .badge-desc {{ font-size: 11px; margin-top: 8px; line-height: 1.2; opacity: 0.9; }}
-    
     .game-card {{ background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 2px solid #38BDF8; border-radius: 20px; padding: 40px; text-align: center; box-shadow: 0 15px 35px rgba(56, 189, 248, 0.15); margin: 10px auto; max-width: 800px; }}
     .card-title {{ color: #38BDF8; font-size: 32px; font-weight: 800; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }}
     .card-text {{ color: #F8FAFC; font-size: 20px; line-height: 1.6; font-weight: 400; }}
-    
     .hire-card {{ background: rgba(30, 41, 59, 0.8); border: 1px solid #475569; padding: 20px; border-radius: 15px; margin-bottom: 15px; }}
     </style>
     """, unsafe_allow_html=True)
@@ -109,7 +101,6 @@ def get_olaylar():
         {"baş": "🏗️ MEGA YATIRIM: Tesis", "det": "Kapasite artırımı. NPV pozitif.", "sec": [("Onayla (-4000₺)", -4000, 2000, 40, 15), ("Reddet (0₺)", 0, 0, 0, -2)]}
     ]
 
-# --- ROZET MANTIĞI ---
 def rozet_hesapla():
     rozetler = []
     gs = st.session_state.gs
@@ -120,12 +111,9 @@ def rozet_hesapla():
         if gs['hisse'] >= 150: rozetler.append(("PLATIN BORSA KURDU", "📈", "Piyasayı domine ettin!", "tier-platinum"))
         elif gs['hisse'] >= 100: rozetler.append(("ALTIN BORSA KURDU", "🐂", "Boğa piyasasının yıldızı.", "tier-gold"))
         elif gs['hisse'] >= 75: rozetler.append(("GÜMÜŞ BORSA KURDU", "📊", "Stabil büyüme.", "tier-silver"))
-
         if gs['itibar'] >= 180: rozetler.append(("PLATIN VİZYONER", "🕊️", "Etik liderlik.", "tier-platinum"))
         elif gs['itibar'] >= 140: rozetler.append(("ALTIN LİDER", "🌟", "Kurumsal imaj zirvede.", "tier-gold"))
-
         if gs['nakit'] >= 15000: rozetler.append(("ALTIN HAZİNEDAR", "💰", "Nakit akışı durdurulamaz.", "tier-gold"))
-
         if gs['en_dusuk_nakit'] < -1000 and gs['nakit'] > 5000: rozetler.append(("ANKA KUŞU", "🔥", "İflasın eşiğinden dönüş!", "tier-secret"))
         if gs['nakit'] == 0: rozetler.append(("MİLİMETRİK HESAP", "🎯", "Kasada tam 0 TL bıraktın!", "tier-secret"))
 
@@ -137,17 +125,29 @@ if st.session_state.gs['nakit'] < -3000 or st.session_state.gs['itibar'] <= 0 or
     st.session_state.gs['bitti'] = True
 
 # --- ARAYÜZ ---
-st.markdown("<h2 style='text-align: center; color: #38BDF8;'>💼 EXECUTIVE COMMAND CENTER V3.0</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center; color: #38BDF8;'>💼 EXECUTIVE COMMAND CENTER V3.1</h2>", unsafe_allow_html=True)
 
-# YENİ: İNSAN KAYNAKLARI SEKMESİ EKLENDİ
+# YENİ: OYUN REHBERİ (İlk turda otomatik açık gelir)
+with st.expander("📖 CEO EL KİTABI: Oyuna Başlamadan Önce Oku", expanded=(st.session_state.gs['tur'] == 1)):
+    st.markdown("""
+    **Hoş Geldin Yönetim Kurulu Başkanı!**  
+    Bu simülasyon, sıradan bir oyun değil; ekonometrik modellerin, sürü psikolojisinin ve kurumsal stratejinin test edildiği acımasız bir laboratuvardır.
+    
+    🎯 **Amacın:** 10 Çeyrek (Tur) boyunca piyasa krizlerini yöneterek **Hisse** değerini ve **İtibarını** maksimize etmek, aynı zamanda **Kasa**'yı eksiden korumaktır.
+    
+    🛠️ **Nasıl Oynanır?**
+    1. **Kriz Yönetimi:** Her tur karşına piyasadaki panik satışları (herd behavior), NPV gerektiren mega yatırımlar veya Black-Scholes temelli riskler çıkar. Alacağın her kararın bir fırsat maliyeti vardır.
+    2. **İnsan Kaynakları:** Oyunu tek başına bitiremezsin. Hemen *İnsan Kaynakları* sekmesine git, adaylara kriz anı soruları sor ve onların cevaplarını **STAR (Durum, Görev, Eylem, Sonuç)** metodolojisine göre analiz ederek en doğru yeteneği işe al. Seçtiğin kişinin özellikleri kararlarını doğrudan etkiler.
+    3. **Yapay Zeka Destekli CFO:** Kararsız kaldığında sağ üstteki **CFO'ya Danış** butonunu kullan. Sana finansal verilere dayanan sert ama stratejik tavsiyeler verecektir.
+    
+    *Dikkat: Kasayı sıfırın altına düşürürsen iflas çanları çalmaya başlar. Stratejini kur ve adını Liderlik Tablosu'na yazdır!*
+    """)
+
 t_komuta, t_ik, t_analiz, t_liderlik, t_rozetler = st.tabs(["🚀 Komuta", "🤝 İnsan Kaynakları", "📊 Analiz", "🏆 Liderlik", "📇 Rozetler"])
 
 with t_komuta:
-    # --- YÖNETİCİ ETKİLERİ GÖSTERGESİ ---
-    if st.session_state.gs['ik_yonetici']:
-        st.info(f"👔 **Aktif COO:** {st.session_state.gs['ik_yonetici']} operasyonları yönetiyor. (Şirket verimliliği arttı!)")
-    else:
-        st.warning("⚠️ Şirketin bir COO'su yok! 'İnsan Kaynakları' sekmesinden hemen bir yönetici işe almalısın.")
+    if st.session_state.gs['ik_yonetici']: st.info(f"👔 **Aktif COO:** {st.session_state.gs['ik_yonetici']} operasyonları yönetiyor.")
+    else: st.warning("⚠️ Şirketin bir COO'su yok! 'İnsan Kaynakları' sekmesinden hemen bir yönetici işe almalısın.")
 
     col_met_1, col_met_2 = st.columns([4, 1])
     with col_met_1:
@@ -202,84 +202,58 @@ with t_komuta:
 
         aktif = st.session_state.gs['aktif_olay']
         st.markdown(f"<div class='game-card'><div class='card-title'>{aktif['baş']}</div><div class='card-text'>{aktif['det']}</div></div>", unsafe_allow_html=True)
-        
         if st.session_state.gs['cfo_mesaj']: st.info(f"👔 **CFO:** {st.session_state.gs['cfo_mesaj']}")
         
         col_btn = st.columns(len(aktif['sec']))
         for i, (isim, n, b, it, h) in enumerate(aktif['sec']):
             if col_btn[i].button(isim, use_container_width=True, key=f"btn_{st.session_state.gs['tur']}_{i}"):
+                carpan_nakit = 1.0; carpan_hisse = 1.0
+                if st.session_state.gs['ik_yonetici'] == "Zeynep": carpan_nakit = 0.9
+                elif st.session_state.gs['ik_yonetici'] == "Cem": carpan_hisse = 1.5
+                elif st.session_state.gs['ik_yonetici'] == "Ali": it += 5
                 
-                # YENİ: İK YÖNETİCİSİ ETKİLERİ (BUFFS)
-                carpan_nakit = 1.0
-                carpan_hisse = 1.0
-                if st.session_state.gs['ik_yonetici'] == "Zeynep": carpan_nakit = 0.9 # Maliyetler (eksi nakit) %10 azalır
-                elif st.session_state.gs['ik_yonetici'] == "Cem": carpan_hisse = 1.5 # Hisse dalgalanması x1.5
-                elif st.session_state.gs['ik_yonetici'] == "Ali": it += 5 # Krizlerde ekstra +5 İtibar koruması
-                
-                gercek_n = n * carpan_nakit if n < 0 else n
-                gercek_h = h * carpan_hisse
-
-                st.session_state.gs['nakit'] += gercek_n
-                st.session_state.gs['borc'] += b
-                st.session_state.gs['itibar'] += it
+                st.session_state.gs['nakit'] += (n * carpan_nakit if n < 0 else n)
+                st.session_state.gs['borc'] += b; st.session_state.gs['itibar'] += it
                 if st.session_state.gs['nakit'] < st.session_state.gs['en_dusuk_nakit']: st.session_state.gs['en_dusuk_nakit'] = st.session_state.gs['nakit']
-                
-                volatilite = random.uniform(-2.0, 3.0)
-                st.session_state.gs['hisse'] = max(5.0, round(st.session_state.gs['hisse'] + gercek_h + volatilite + (it*0.5), 2))
+                st.session_state.gs['hisse'] = max(5.0, round(st.session_state.gs['hisse'] + (h * carpan_hisse) + random.uniform(-2.0, 3.0) + (it*0.5), 2))
                 st.session_state.gs['son_haber'] = f"Yönetim kararını verdi!"
                 st.session_state.gs['log'].append({"Tur": st.session_state.gs['tur'], "Olay": aktif['baş'], "Nakit": st.session_state.gs['nakit']})
-                st.session_state.gs['tur'] += 1
-                st.session_state.gs['aktif_olay'] = None
-                st.session_state.gs['cfo_mesaj'] = ""
+                st.session_state.gs['tur'] += 1; st.session_state.gs['aktif_olay'] = None; st.session_state.gs['cfo_mesaj'] = ""
                 st.rerun()
 
-# --- YENİ İNSAN KAYNAKLARI EKRANI ---
 with t_ik:
-    st.write("### 🤝 Yönetici Mülakatları (STAR Metodu)")
+    st.write("### 🤝 Yönetici Mülakatları")
     if st.session_state.gs['ik_yonetici'] is None:
-        st.markdown("Şirketin hızlı büyüyor! Kararların maliyetini düşürmek ve verimi artırmak için bir **COO (Operasyon Direktörü)** seçmelisin. Adaylara *'Zor bir krizi nasıl çözdün?'* diye sor ve **STAR (Situation, Task, Action, Result)** formatına ne kadar uyduklarını analiz et.")
-        
+        st.markdown("Kararların maliyetini düşürmek ve verimi artırmak için bir **COO** seçmelisin. Adaylara soru sor ve cevaplarını **STAR** formatına göre analiz et.")
         c1, c2, c3 = st.columns(3)
-        
-        # ADAY 1
         with c1:
-            st.markdown("<div class='hire-card'><h4>👩‍💼 Zeynep</h4><p><b>Ekol:</b> Kurumsal Denetim (PwC)</p><p><b>Etkisi:</b> Tüm olay maliyetlerini %10 düşürür.</p></div>", unsafe_allow_html=True)
-            if st.button("Soru Sor: Zeynep", key="s_z"): st.session_state.gs['mulakat_gosterilen'] = 'Zeynep'
-            if st.button("İşe Al: Zeynep", type="primary", key="a_z"): 
-                st.session_state.gs['ik_yonetici'] = "Zeynep"; st.rerun()
-                
-        # ADAY 2
+            st.markdown("<div class='hire-card'><h4>👩‍💼 Zeynep</h4><p><b>Ekol:</b> Kurumsal Denetim</p><p><b>Etkisi:</b> Olay maliyetlerini %10 düşürür.</p></div>", unsafe_allow_html=True)
+            if st.button("Soru Sor", key="s_z"): st.session_state.gs['mulakat_gosterilen'] = 'Zeynep'
+            if st.button("İşe Al", type="primary", key="a_z"): st.session_state.gs['ik_yonetici'] = "Zeynep"; st.rerun()
         with c2:
-            st.markdown("<div class='hire-card'><h4>👨‍💼 Cem</h4><p><b>Ekol:</b> Agresif Wall Street</p><p><b>Etkisi:</b> Hisse senedi kazançlarını %50 katlar (Riskli).</p></div>", unsafe_allow_html=True)
-            if st.button("Soru Sor: Cem", key="s_c"): st.session_state.gs['mulakat_gosterilen'] = 'Cem'
-            if st.button("İşe Al: Cem", type="primary", key="a_c"): 
-                st.session_state.gs['ik_yonetici'] = "Cem"; st.rerun()
-
-        # ADAY 3
+            st.markdown("<div class='hire-card'><h4>👨‍💼 Cem</h4><p><b>Ekol:</b> Wall Street</p><p><b>Etkisi:</b> Hisse kazançlarını x1.5 katlar.</p></div>", unsafe_allow_html=True)
+            if st.button("Soru Sor", key="s_c"): st.session_state.gs['mulakat_gosterilen'] = 'Cem'
+            if st.button("İşe Al", type="primary", key="a_c"): st.session_state.gs['ik_yonetici'] = "Cem"; st.rerun()
         with c3:
-            st.markdown("<div class='hire-card'><h4>👨‍🎓 Ali</h4><p><b>Ekol:</b> Ekonometri / Analist</p><p><b>Etkisi:</b> Her turda +5 Ekstra İtibar Kalkanı sağlar.</p></div>", unsafe_allow_html=True)
-            if st.button("Soru Sor: Ali", key="s_a"): st.session_state.gs['mulakat_gosterilen'] = 'Ali'
-            if st.button("İşe Al: Ali", type="primary", key="a_a"): 
-                st.session_state.gs['ik_yonetici'] = "Ali"; st.rerun()
+            st.markdown("<div class='hire-card'><h4>👨‍🎓 Ali</h4><p><b>Ekol:</b> Ekonometri</p><p><b>Etkisi:</b> Her tur +5 İtibar kalkanı sağlar.</p></div>", unsafe_allow_html=True)
+            if st.button("Soru Sor", key="s_a"): st.session_state.gs['mulakat_gosterilen'] = 'Ali'
+            if st.button("İşe Al", type="primary", key="a_a"): st.session_state.gs['ik_yonetici'] = "Ali"; st.rerun()
 
         st.write("---")
-        # STAR CEVAPLARI
         if st.session_state.gs['mulakat_gosterilen'] == 'Zeynep':
-            st.success("🗣️ **Zeynep'in Cevabı:** \n\n**(S-Durum):** Önceki şirketimde nakit rezervleri aniden tükenmişti.\n**(T-Görev):** CFO benden acil bir kurtarma planı yapmamı istedi.\n**(A-Eylem):** Tüm departman bütçelerini denetleyip gereksiz harcamaları %15 kestim ve tedarikçilerle masaya oturdum.\n**(R-Sonuç):** 3 ay içinde şirketi tekrar nakit pozitif duruma getirdim ve %5 kârlılık sağladık.")
-            st.caption("💡 *Sistem Notu: Kusursuz bir STAR (Durum-Görev-Eylem-Sonuç) örneği.*")
+            st.success("🗣️ **Zeynep:** \n**(S-Durum):** Nakit rezervleri tükenmişti.\n**(T-Görev):** CFO acil kurtarma planı istedi.\n**(A-Eylem):** Harcamaları %15 kestim.\n**(R-Sonuç):** 3 ayda nakit pozitif duruma geçtik.")
+            st.caption("💡 *Not: Kusursuz bir STAR örneği.*")
         elif st.session_state.gs['mulakat_gosterilen'] == 'Cem':
-            st.warning("🗣️ **Cem'in Cevabı:** \n\nGeçen yıl piyasa tamamen çökerken ben ofise kapanıp tüm varlıklarımızı türev piyasalarda açığa sattım ve şirkete bir gecede 5 milyon dolar kazandırdım. Detaylara ve uzun analizlere takılmam, doğrudan paraya ve sonuca bakarım.")
-            st.caption("💡 *Sistem Notu: Sadece Sonuç (Result) odaklı. Durum ve Görev kısımları eksik. Agresif ama etkili.*")
+            st.warning("🗣️ **Cem:** \nGeçen yıl piyasa çökerken türev piyasalarda açığa sattım ve 5 milyon dolar kazandırdım. Sonuca bakarım.")
+            st.caption("💡 *Not: Sadece Sonuç (R) odaklı. Agresif.*")
         elif st.session_state.gs['mulakat_gosterilen'] == 'Ali':
-            st.info("🗣️ **Ali'nin Cevabı:** \n\n**(S-Durum):** Ekonometrik modelde bir kriz sinyali vardı.\n**(T-Görev):** Lineer piyasa modelini incelerken matematiksel bir işaret hatası tespit ettim.\n**(A-Eylem):** O hatayı denklem üzerinde düzelttim ve raporladım...\n\n*(Süre bitti, sonuca gelemedi)*")
-            st.caption("💡 *Sistem Notu: Çok analitik bir yaklaşım ama 'Sonuç (Result)' kısmı eksik kaldı. Eylemde yavaş.*")
-
-    else:
-        st.success(f"🎉 **{st.session_state.gs['ik_yonetici']}** şu an COO olarak görev yapıyor! Yönetim tarzı tüm operasyonlara yansıtıldı. Yeni alımlar yıl sonunda yapılacak.")
+            st.info("🗣️ **Ali:** \n**(S):** Modelde kriz sinyali vardı.\n**(T):** Lineer piyasa modelinde işaret hatası tespit ettim.\n**(A):** Hatayı denklem üzerinde düzelttim...\n*(Sonuca gelemedi)*")
+            st.caption("💡 *Not: Analitik ama Sonuç (R) eksik.*")
+    else: st.success(f"🎉 **{st.session_state.gs['ik_yonetici']}** şu an COO olarak görev yapıyor!")
 
 with t_analiz: st.write("### 🧭 Şirket Sağlık Göstergeleri"); col_g1, col_g2 = st.columns(2); col_g1.plotly_chart(go.Figure(go.Indicator(mode="gauge+number", value=st.session_state.gs['itibar'], title={'text':"İtibar", 'font':{'color':'white'}}, gauge={'axis':{'range':[0,200]},'bar':{'color':"#38BDF8"}})).update_layout(paper_bgcolor='rgba(0,0,0,0)', font_color='white', height=300), use_container_width=True); col_g2.plotly_chart(go.Figure(go.Indicator(mode="gauge+number+delta", value=st.session_state.gs['hisse'], delta={'reference':50.0}, title={'text':"Hisse", 'font':{'color':'white'}}, gauge={'axis':{'range':[0,150]},'bar':{'color':"#A78BFA"}})).update_layout(paper_bgcolor='rgba(0,0,0,0)', font_color='white', height=300), use_container_width=True)
 with t_liderlik: 
     st.write("### 🌍 Global Top 10 CEO")
     tablo = get_leaderboard()
-    if tablo: df_lb = pd.DataFrame(tablo); df_lb.index = df_lb.index + 1; st.dataframe(df_lb.rename(columns={"isim": "CEO / Şirket", "hisse": "Hisse Değeri (₺)", "itibar": "İtibar Puanı", "rozet": "Unvan"}), use_container_width=True)
-with t_rozetler: st.write("### 📜 Tüm Rozetler ve Gereksinimler"); st.markdown("- **🚨 UTANÇ ROZETLERİ:** Kasa eksiye düşerse alırsın.\n- **Platin Seviye:** Hisse > 150₺ veya İtibar > 180.\n- **Altın Seviye:** Hisse > 100₺ veya Nakit > 15.000₺.\n- **Gümüş Seviye:** Hisse > 75₺.")
+    if tablo: df_lb = pd.DataFrame(tablo); df_lb.index = df_lb.index + 1; st.dataframe(df_lb.rename(columns={"isim": "CEO", "hisse": "Hisse", "itibar": "İtibar", "rozet": "Unvan"}), use_container_width=True)
+with t_rozetler: st.write("### 📜 Tüm Rozetler ve Gereksinimler"); st.markdown("- **🚨 UTANÇ ROZETLERİ:** Kasa eksiye düşerse alırsın.\n- **Platin Seviye:** Hisse > 150₺ veya İtibar > 180.\n- **Altın Seviye:** Hisse > 100₺ veya Nakit > 15.000₺.")
